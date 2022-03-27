@@ -7,8 +7,6 @@ from march_madness.models.game import *
 from march_madness.models.graph import Graph
 from ..helpers import string_formatting as sf
 
-# convert this into tree structure for search by Game, organized by year
-# standardize titles so we can query by round
 
 def load_all_data() -> OrderedDict:
     """
@@ -250,31 +248,15 @@ def construct_graphs(games_by_year: OrderedDict) -> dict:
     return graph
 
 
-def search(full_graph: dict, team: str = None, seed: int = -1) -> dict:
-    """
-    Searches and returns the farthest a team or seed has advanced
-    :param full_graph: key = year, value = Graph
-    :param team: str | team name to search on
-    :param seed: int | seed number to search on
-    :return: dict(best_result_by_round: <object>) | 1000: no wins, 100: unnumbered rounds
-    """
-
-    print("\n\n[search] Starting full graph search...")
-    if team is not None:
-        return search_for_team(full_graph, team)
-    elif seed != -1:
-        return search_for_seed(full_graph, seed)
-
-
-def search_for_team(full_graph: dict, team: str) -> dict:
+def search_for_team(team: str) -> dict:
     """
     Searches through full graph for best results by given TEAM
-    :param full_graph:
     :param team: str | name
     :return: dict(best_result_by_round: [year])
     """
 
-    print(f"[search] Searching graph for team '{team}'...")
+    print(f"\n\n[search] Searching graph for team '{team}'...")
+    full_graph = construct_graphs(load_all_data())
     results = dict()
     for year in full_graph.keys():
         _, result_tuple = full_graph[year].bfs(year, team=team)
@@ -302,15 +284,15 @@ def search_for_team(full_graph: dict, team: str) -> dict:
     return results
 
 
-def search_for_seed(full_graph: dict, seed: int) -> dict:
+def search_for_seed(seed: int) -> dict:
     """
     Searches through full graph for best results by given SEED
-    :param full_graph
     :param seed: int | number of desired seed to search
     :return: dict(best_result_by_round: team: [year])  -differs from "team search" result
     """
 
-    print(f"[search] Searching graph for seed #{seed}...")
+    print(f"\n\n[search] Searching graph for seed #{seed}...")
+    full_graph = construct_graphs(load_all_data())
     results = dict()
     for year in full_graph.keys():
         _, result_tuple = full_graph[year].bfs(year, seed=seed)
@@ -333,7 +315,7 @@ def search_for_seed(full_graph: dict, seed: int) -> dict:
         print("Never won a March Madness game")
     else:
         for round_number in sorted_keys:
-            format_round = format_round_number(round_number, len(years_by_team.keys()))
+            format_round = format_round_number(round_number, 2)
             if format_round != "":
                 print(f"  Win in <{format_round}>")
                 years_by_team = results[round_number]  # { team_name: [years] }
@@ -352,12 +334,12 @@ def format_round_number(r: int, n_keys: int) -> str:
     """
 
     if r == Team.RESULT_NO_WINS:  # no wins anywhere
-        if n_keys > 1:  # team has won a tournament game in 1 year
+        if n_keys > 1:  # team has won a tournament game in a different year
             return ""  # pass in loop
         return "never won a March Madness game"
     elif r == Team.RESULT_WIN_UNKNOWN_ROUND:  # win in unmarked round
         return "PRELIMINARY Round"
     elif r == 2:
-        return "CHAMPIONSHIP"
+        return "CHAMPIONSHIP Round"
     else:
         return f"Round of {r}"

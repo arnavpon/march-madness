@@ -1,0 +1,51 @@
+{% extends 'bootstrap/base.html' %}
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% block styles %}
+{{ super() }}
+	<style>
+		body { background: #e8f1f9; }
+	</style>
+{% endblock %}
+
+
+{% block title %}
+Search by Team
+{% endblock %}
+
+
+{% block content %}
+
+<div class="container">
+  <div class="row">
+    <div class="col-md-10 col-lg-8 mx-lg-auto mx-md-auto">
+        <h1 class="pt-5 pb-2">#{{ seed }} Seed</h1>
+
+        {% if best_round != '1000' %}
+        <h2 class="pt-5 pb-2" style="color: red">Best Result</h2>
+        <p class="pt-5">Win in <strong>{{ best_round }}</strong></p>
+        {% for t in best_teams %}
+            <li class="pt-5"><strong>{{ t[0] }}</strong> in {{ t[1] }}</li>
+        {% endfor %}
+
+        {% elif best_round == '1000' %}
+        <p class="pt-5">No #{{ seed }} Seed has ever won a March Madness game</p>
+        {% endif %}
+
+        {% if other_results|length > 0 %}
+        <h2 class="pt-5 pb-2">Other Results</h2>
+        {% for r in other_results %}
+            <p class="pt-5">Win in <strong>{{ r[0] }}</strong></p>
+            <ul>
+                {% for line in r[1] %}
+                <li class="pt-5"><strong>{{ line[0] }}</strong> in {{ line[1] }} </li>
+                {% endfor %}
+            </ul>
+        {% endfor %}
+        {% endif %}
+
+    </div>
+  </div>
+</div>
+
+{% endblock %}
