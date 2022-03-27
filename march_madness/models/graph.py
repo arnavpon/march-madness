@@ -1,5 +1,6 @@
-from .game import Game
 from queue import SimpleQueue
+from .game import Game, Team
+from ..helpers import string_formatting as sf
 
 class Graph(object):
 
@@ -17,39 +18,49 @@ class Graph(object):
         print(f"\n\n[show_graph] Year {self.year}")
         return self.championship.show_levels_breadth_first(SimpleQueue(), set())  # ***
 
-    def bfs(self, year: int, seed: int = -1, team: str = None) -> list[tuple]:
+    def bfs(self, year: int, seed: int = -1, team: str = None) -> tuple:
         """
         Returns farthest instance for a team or seed within a given year. More effective to use BFS than DFS since we're searching top-down (higher -> lower round)
-        :return: [tuple(year, max_round)] | use list b/c there may be ties
+        :return: tuple( year: int, best_result: tuple(round_number, team_name) )
         """
 
         if team is not None:
 
             def team_search(node: Game) -> tuple:
-                # find Node where given team won the game
+                """
+                Searches for nodes where the specified Team won the game
+                :param node: in game graph
+                :return: tuple(round: int, None)
+                """
+
                 winner = node.get_winner().name
-                if team == winner:
+                if sf.format_string_for_comparison(team) == sf.format_string_for_comparison(winner):
                     print(f" ***Found matching node: {year} ---{node.get_game_summary()}---")
                     try:  # try casting round -> int
                         max_round = int(node.tourney_round)
                     except ValueError:
-                        max_round = 100  # 100 is default, indicating some win somewhere
-                    return max_round
-                return 1000  # none result
+                        max_round = Team.RESULT_WIN_UNKNOWN_ROUND  # 100 is default
+                    return max_round, None
+                return Team.RESULT_NO_WINS, None  # none result
 
             return year, self.championship.breadth_first_search(SimpleQueue(), set(), team_search)
 
         elif seed != -1:
 
             def seed_search(node: Game) -> tuple:
-                winner = node.get_winner().seed
-                if (winner != -1) and (seed == winner):
+                """
+                Searches for nodes where the specified seed WON the game
+                :param node: in game graph
+                :return: tuple(round: int, team: str)
+                """
+                winner = node.get_winner()
+                if (winner.seed != -1) and (seed == winner.seed):
                     print(f" ***Found matching node: {year} ---{node.get_game_summary()}---")
                     try:
                         max_round = int(node.tourney_round)
                     except ValueError:
-                        max_round = 100  # 100 is default, indicating some win somewhere
-                    return max_round
-                return 1000  # none result
+                        max_round = Team.RESULT_WIN_UNKNOWN_ROUND
+                    return max_round, winner.name  # return team for that seed
+                return Team.RESULT_NO_WINS, ""  # no win result - don't return team
 
             return year, self.championship.breadth_first_search(SimpleQueue(), set(), seed_search)

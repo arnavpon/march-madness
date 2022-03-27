@@ -10,58 +10,68 @@ class NodeTestCase(unittest.TestCase):
         cls.full_graph = construct_graphs(cls.gby)
 
     def test_search_rutgers(self):
-        years, max_round = search(self.full_graph, team="Rutgers")
+        results = search(self.full_graph, team=" rutgers")
+        max_round = min(results.keys())
+        best_years = results[max_round]
         self.assertEqual(max_round, 8)
-        self.assertEqual(len(years), 1)
-        for year in years:
-            self.assertIn(year, set([1976]))
+        self.assertEqual(set(best_years), set([1976]))
 
     def test_search_duke(self):
-        years, max_round = search(self.full_graph, team="Duke")
+        results = search(self.full_graph, team="Duke  ")
+        max_round = min(results.keys())
+        best_years = results[max_round]
         self.assertEqual(max_round, 2)
-        self.assertEqual(len(years), 5)
-        for year in years:
-            self.assertIn(year, set([1991, 1992, 2001, 2010, 2015]))
+        self.assertEqual(set(best_years), set([1991, 1992, 2001, 2010, 2015]))
 
     def test_search_unc(self):
-        years, max_round = search(self.full_graph, team="North Carolina")
+        results = search(self.full_graph, team="North Carolina")
+        max_round = min(results.keys())
+        best_years = results[max_round]
         self.assertEqual(max_round, 2)
-        self.assertEqual(len(years), 6)
-        for year in years:
-            self.assertIn(year, set([1957, 1982, 1993, 2005, 2009, 2017]))
-
-    def test_search_4seed(self):
-        years, max_round = search(self.full_graph, seed=4)
-        self.assertEqual(max_round, 2)
-        self.assertEqual(len(years), 1)
-        for year in years:
-            self.assertIn(year, set([1997]))
-
-    def test_search_8seed(self):
-        years, max_round = search(self.full_graph, seed=8)
-        self.assertEqual(max_round, 2)
-        self.assertEqual(len(years), 1)
-        for year in years:
-            self.assertIn(year, set([1985]))
-
-    def test_search_15seed(self):
-        years, max_round = search(self.full_graph, seed=15)
-        self.assertEqual(max_round, 32)
-        self.assertEqual(len(years), 1)
-        for year in years:
-            self.assertIn(year, set([2013]))
-
-    def test_search_16seed(self):
-        years, max_round = search(self.full_graph, seed=16)
-        self.assertEqual(max_round, 64)
-        self.assertEqual(len(years), 1)
-        for year in years:
-            self.assertIn(year, set([2018]))
+        self.assertEqual(set(best_years), set([1957, 1982, 1993, 2005, 2009, 2017]))
 
     def test_search_noteam(self):
-        years, max_round = search(self.full_graph, team="unknown")
+        results = search(self.full_graph, team="unknown")
+        max_round = min(results.keys())
+        best_years = results[max_round]
         self.assertEqual(max_round, 1000)
-        self.assertEqual(len(years), 2019-1939+1)
+        self.assertEqual(len(best_years), 2019-1939+1)
+
+    def test_search_4seed(self):
+        results = search(self.full_graph, seed=4)
+        max_round = min(results.keys())
+        teams = results[max_round].keys()
+        years = [y for year in results[max_round].values() for y in year]
+        self.assertEqual(max_round, 2)
+        self.assertIn("Arizona", set(teams))
+        self.assertIn(1997, set(years))
+
+    def test_search_8seed(self):
+        results = search(self.full_graph, seed=8)
+        max_round = min(results.keys())
+        teams = results[max_round].keys()
+        years = [y for year in results[max_round].values() for y in year]
+        self.assertEqual(max_round, 2)
+        self.assertIn("Villanova", set(teams))
+        self.assertIn(1985, set(years))
+
+    def test_search_15seed(self):
+        results = search(self.full_graph, seed=15)
+        max_round = min(results.keys())
+        teams = results[max_round].keys()
+        years = [y for year in results[max_round].values() for y in year]
+        self.assertEqual(max_round, 32)
+        self.assertIn("Florida Gulf Coast", set(teams))
+        self.assertIn(2013, set(years))
+
+    def test_search_16seed(self):
+        results = search(self.full_graph, seed=16)
+        max_round = min(results.keys())
+        teams = results[max_round].keys()
+        years = [y for year in results[max_round].values() for y in year]
+        self.assertEqual(max_round, 64)
+        self.assertIn("UMBC", set(teams))
+        self.assertIn(2018, set(years))
 
     def test_1939(self):
         graph = self.full_graph[1939].show()

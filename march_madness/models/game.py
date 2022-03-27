@@ -6,7 +6,7 @@ def format_round(rd: str) -> int:
     rd_lower = rd.lower()
     # print(f"[format_round] Round: {rd_lower}")
     if (rd_lower == "first four") or (rd_lower == "opening round"):
-        return "100"  # marker for preliminary round
+        return f"{Team.RESULT_WIN_UNKNOWN_ROUND}"  # marker for preliminary round
     elif "64" in rd_lower:
         return "64"
     elif "32" in rd_lower:
@@ -152,32 +152,34 @@ class Game(object):
                             # print(f"  added CHILD of '{self.get_game_summary()}' -> q")
         return graph_string
 
-    def breadth_first_search(self, q: SimpleQueue, explored: set, comp) -> int:
+    def breadth_first_search(self, q: SimpleQueue, explored: set, comp) -> tuple:
         """
         Breadth First Search through graph
         :param q: queue containing game objects to search
         :param explored: set containing explored objects
         :param comp: lambda used to check for seed or name
-        :return: int | highest matching tournament round
+        :return: tuple(round_number: int, team_name: str?) | highest matching tournament round that was WON (1000: no wins, 100: win in unknown round, ..., 2 == champs)
         """
 
         q.put(self)  # add this node to queue to start
         best_round = 1000  # 1000 means no wins in tournament at any level
+        team = ""
         while q.qsize() > 0:  # iterate until queue is empty
             # print(f"[bfs] Queue length: {q.qsize()} | Explored: {explored}")
             next_item = q.get()
             if next_item not in explored:
                 # print(f"Searching node ---'{self.get_game_summary()}'---")
-                res = comp(next_item)  # apply lambda
+                res, t = comp(next_item)  # apply lambda
                 if res < best_round:
                     # print(f"Result: {res}")
-                    return res
+                    print(t)
+                    return res, t
                 explored.add(next_item)  # label route as explored after printing
                 if len(next_item.children) > 0:  # stop after getting to leaf
                     for child in next_item.children:
                         if child not in explored:
                             q.put(child)
-        return best_round
+        return best_round, team
 
 
 class Team(object):
@@ -185,6 +187,10 @@ class Team(object):
     Representation for a team within a game
     Example input format: No. 16 North Dakota State 78
     """
+
+    RESULT_NO_WINS = 1000  # result for never winning in tourney
+    RESULT_WIN_UNKNOWN_ROUND = 100  # result for winning in unknown tourney round (i.e. not round of 64, 32, etc.)
+
     def __init__(self, html: str):
         # print(f"Input: '{html}'")
         score_match = re.search(r"(\d+)$", html)  # last numerical instance

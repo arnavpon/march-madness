@@ -5,6 +5,7 @@ from collections import OrderedDict
 
 from march_madness.models.game import *
 from march_madness.models.graph import Graph
+from ..helpers import string_formatting as sf
 
 # convert this into tree structure for search by Game, organized by year
 # standardize titles so we can query by round
@@ -249,32 +250,114 @@ def construct_graphs(games_by_year: OrderedDict) -> dict:
     return graph
 
 
-def search(full_graph: dict, team: str = None, seed: int = -1) -> tuple:
+def search(full_graph: dict, team: str = None, seed: int = -1) -> dict:
     """
     Searches and returns the farthest a team or seed has advanced
     :param full_graph: key = year, value = Graph
     :param team: str | team name to search on
     :param seed: int | seed number to search on
-    :return: tuple(year(s) of best result, best result by round)
+    :return: dict(best_result_by_round: <object>) | 1000: no wins, 100: unnumbered rounds
     """
 
-    print("[search] Starting full graph search...")
-    year_of_result = set()
-    best_result = 1000
-    for year in full_graph.keys():
-        _, result = full_graph[year].bfs(year, team=team, seed=seed)
-        if result == best_result:  # tied result
-            year_of_result.add(year)  # add
-        elif result < best_result:  # new best
-            year_of_result = set([year])  # overwrite
-            best_result = result
+    print("\n\n[search] Starting full graph search...")
+    if team is not None:
+        return search_for_team(full_graph, team)
+    elif seed != -1:
+        return search_for_seed(full_graph, seed)
 
-    formatted_best_round = ""
-    if best_result == 1000:  # no wins anywhere
-        formatted_best_round = "*team has never won a game*"
-    elif best_result == 100:  # win in unmarked round
-        formatted_best_round = "PRELIMS"
+
+def search_for_team(full_graph: dict, team: str) -> dict:
+    """
+    Searches through full graph for best results by given TEAM
+    :param full_graph:
+    :param team: str | name
+    :return: dict(best_result_by_round: [year])
+    """
+
+    print(f"[search] Searching graph for team '{team}'...")
+    results = dict()
+    for year in full_graph.keys():
+        _, result_tuple = full_graph[year].bfs(year, team=team)
+        result, team_name = result_tuple
+        if result in results.keys():  # result was achieved in previous year
+            existing_years = results[result]
+            existing_years.append(year)  # add to END of list to preserve order
+            results[result] = existing_years
+        else:  # new result type
+            results[result] = [year]
+
+    print("\n")
+    sorted_keys = sorted(results.keys())  # sort low -> high (best -> worst finishes)
+    counter = 0
+    for round_number in sorted_keys:
+        years = results[round_number]
+        formatted_round = format_round_number(round_number, len(sorted_keys))
+        if formatted_round != "":  # ignore empty result, continue loop
+            y = [f"{yr}" for yr in years]
+            if counter == 0:
+                print(f"Best result for '{sf.format_string_for_display(team)}' is win in <{formatted_round}> in {', '.join(y)}")
+            else:
+                print(f"Other results: win in <{formatted_round}> in {', '.join(y)}")
+        counter += 1
+    return results
+
+
+def search_for_seed(full_graph: dict, seed: int) -> dict:
+    """
+    Searches through full graph for best results by given SEED
+    :param full_graph
+    :param seed: int | number of desired seed to search
+    :return: dict(best_result_by_round: team: [year])  -differs from "team search" result
+    """
+
+    print(f"[search] Searching graph for seed #{seed}...")
+    results = dict()
+    for year in full_graph.keys():
+        _, result_tuple = full_graph[year].bfs(year, seed=seed)
+        result, team_name = result_tuple
+        if result in results.keys():  # result was achieved in previous year
+            years_by_team = results[result]  # dict(team: year)
+            if team_name in years_by_team:  # team already exists
+                results_for_team = years_by_team[team_name]
+                results_for_team.append(year)
+                years_by_team[team_name] = results_for_team  # add year to list
+            else:  # new team
+                years_by_team[team_name] = [year]  # create list
+            results[result] = years_by_team
+        else:  # new result type
+            results[result] = {team_name: [year]}
+
+    print(f"\nBest results for a #{seed} Seed:")
+    sorted_keys = sorted(results.keys())  # sort low -> high (best -> worst finishes)
+    if len(sorted_keys) == 1:
+        print("Never won a March Madness game")
     else:
-        formatted_best_round = f"{best_result}"
-    print(f"[search] Best result for {'Team' if team is not None else 'Seed'} <{team if team is not None else seed}> is <Round of {formatted_best_round}> in year(s) {year_of_result}")
-    return year_of_result, best_result
+        for round_number in sorted_keys:
+            format_round = format_round_number(round_number, len(years_by_team.keys()))
+            if format_round != "":
+                print(f"  Win in <{format_round}>")
+                years_by_team = results[round_number]  # { team_name: [years] }
+                for team, years in years_by_team.items():
+                    y = [f"{yr}" for yr in years]
+                    print(f"    Team '{sf.format_string_for_display(team)}' in {', '.join(y)}")
+    return results
+
+
+def format_round_number(r: int, n_keys: int) -> str:
+    """
+    Returns formatted string based on input 'best round' result
+    :param r: round as int
+    :param n_keys: number of keys in results dict (reflects # of unique tourney results)
+    :return: round as str
+    """
+
+    if r == Team.RESULT_NO_WINS:  # no wins anywhere
+        if n_keys > 1:  # team has won a tournament game in 1 year
+            return ""  # pass in loop
+        return "never won a March Madness game"
+    elif r == Team.RESULT_WIN_UNKNOWN_ROUND:  # win in unmarked round
+        return "PRELIMINARY Round"
+    elif r == 2:
+        return "CHAMPIONSHIP"
+    else:
+        return f"Round of {r}"
